@@ -279,7 +279,7 @@ class partial:
     """
 
     __slots__ = "func", "args", "keywords", "__dict__", "__weakref__"
-
+    # / 表示其之前的参数必须都是位置参数
     def __new__(cls, func, /, *args, **keywords):
         if not callable(func):
             raise TypeError("the first argument must be callable")
@@ -468,11 +468,15 @@ def _make_key(args, kwds, typed,
         key += kwd_mark
         for item in kwds.items():
             key += item
+    # 为 True 时，会对整数和浮点数作区分，比如 9、9.0 不同
     if typed:
         key += tuple(type(v) for v in args)
         if kwds:
             key += tuple(type(v) for v in kwds.values())
     elif len(key) == 1 and type(key[0]) in fasttypes:
+        # 只有一个参数且参数类型是 int or str 时不用 hash，为什么 float 时需要？
+        # 字典中 key 为 1.0 和 1 没有区别，但是实际使用中，不希望 1.0 和 1 相撞
+        # ps hash(1) == hash(1.0)
         return key[0]
     return _HashedSeq(key)
 
@@ -505,6 +509,7 @@ def lru_cache(maxsize=128, typed=False):
         # Negative maxsize is treated as 0
         if maxsize < 0:
             maxsize = 0
+    # callable 返回 True or False，对象后面可加 () 为 True
     elif callable(maxsize) and isinstance(typed, bool):
         # The user_function was passed in directly via the maxsize argument
         user_function, maxsize = maxsize, 128
@@ -516,6 +521,7 @@ def lru_cache(maxsize=128, typed=False):
             'Expected first argument to be an integer, a callable, or None')
 
     def decorating_function(user_function):
+        # func、None、False、namedtuple
         wrapper = _lru_cache_wrapper(user_function, maxsize, typed, _CacheInfo)
         wrapper.cache_parameters = lambda : {'maxsize': maxsize, 'typed': typed}
         return update_wrapper(wrapper, user_function)
@@ -527,13 +533,14 @@ def _lru_cache_wrapper(user_function, maxsize, typed, _CacheInfo):
     sentinel = object()          # unique object used to signal cache misses
     make_key = _make_key         # build a key from the function arguments
     PREV, NEXT, KEY, RESULT = 0, 1, 2, 3   # names for the link fields
-
+    # key 是 hash 后的参数值，value 是链表节点 
     cache = {}
     hits = misses = 0
     full = False
     cache_get = cache.get    # bound method to lookup a key or return None
     cache_len = cache.__len__  # get cache size without calling len()
     lock = RLock()           # because linkedlist updates aren't threadsafe
+    # root 节点一直是个空节点
     root = []                # root of the circular doubly linked list
     root[:] = [root, root, None, None]     # initialize by pointing to self
 
@@ -551,6 +558,7 @@ def _lru_cache_wrapper(user_function, maxsize, typed, _CacheInfo):
         def wrapper(*args, **kwds):
             # Simple caching without ordering or size limit
             nonlocal hits, misses
+            # args 是 tuple，kwds 是 dict
             key = make_key(args, kwds, typed)
             result = cache_get(key, sentinel)
             if result is not sentinel:
@@ -572,10 +580,13 @@ def _lru_cache_wrapper(user_function, maxsize, typed, _CacheInfo):
                 if link is not None:
                     # Move the link to the front of the circular queue
                     link_prev, link_next, _key, result = link
+                    # 摘掉原指向 link 节点的两个指针
                     link_prev[NEXT] = link_next
                     link_next[PREV] = link_prev
+                    # 更新指向 link 的指针
                     last = root[PREV]
                     last[NEXT] = root[PREV] = link
+                    # 更新 link 节点发出的两个指针
                     link[PREV] = last
                     link[NEXT] = root
                     hits += 1
@@ -591,6 +602,7 @@ def _lru_cache_wrapper(user_function, maxsize, typed, _CacheInfo):
                     pass
                 elif full:
                     # Use the old root to store the new key and result.
+                    # 容量满时，将最近最少使用的节点（空节点的下一个节点）的 key 和 value 直接替换，避免删除和添加节点操作
                     oldroot = root
                     oldroot[KEY] = key
                     oldroot[RESULT] = result
@@ -600,6 +612,7 @@ def _lru_cache_wrapper(user_function, maxsize, typed, _CacheInfo):
                     # update. That will prevent potentially arbitrary object
                     # clean-up code (i.e. __del__) from running while we're
                     # still adjusting the links.
+                    # 最近最少使用的节点变成空节点
                     root = oldroot[NEXT]
                     oldkey = root[KEY]
                     oldresult = root[RESULT]
@@ -612,8 +625,11 @@ def _lru_cache_wrapper(user_function, maxsize, typed, _CacheInfo):
                     cache[key] = oldroot
                 else:
                     # Put result in a new link at the front of the queue.
+                    # last 是尾节点
                     last = root[PREV]
+                    # link 是需要在头节点插入的新节点，插入后头节点不会变换，依旧时原先的空节点
                     link = [last, root, key, result]
+                    # 尾节点的 next 指针指向新的头节点；原头节点的 prev 指针指向新的头节点
                     last[NEXT] = root[PREV] = cache[key] = link
                     # Use the cache_len bound method instead of the len() function
                     # which could potentially be wrapped in an lru_cache itself.
@@ -932,6 +948,7 @@ _NOT_FOUND = object()
 
 
 class cached_property:
+    # 不支持异步
     def __init__(self, func):
         self.func = func
         self.attrname = None
@@ -944,6 +961,7 @@ class cached_property:
         elif name != self.attrname:
             raise TypeError(
                 "Cannot assign the same cached_property to two different names "
+                # !r 必须在变量后面
                 f"({self.attrname!r} and {name!r})."
             )
 
@@ -963,6 +981,7 @@ class cached_property:
             raise TypeError(msg) from None
         val = cache.get(self.attrname, _NOT_FOUND)
         if val is _NOT_FOUND:
+            # 使用线程锁，防止多线程时修改缓存值
             with self.lock:
                 # check if another thread filled cache while we awaited lock
                 val = cache.get(self.attrname, _NOT_FOUND)
