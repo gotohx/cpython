@@ -205,6 +205,8 @@ def total_ordering(cls):
 
 def cmp_to_key(mycmp):
     """Convert a cmp= function into a key= function"""
+    # 内部创建一个 class，并返回该 class，在 class 调用传入的函数进行
+    # 运算符重载，使得两个 class 对象可以比较
     class K(object):
         __slots__ = ['obj']
         def __init__(self, obj):
@@ -948,7 +950,7 @@ _NOT_FOUND = object()
 
 
 class cached_property:
-    # 不支持异步
+    # 不支持异步,是装饰器,要求装饰的函数无参数
     def __init__(self, func):
         self.func = func
         self.attrname = None
@@ -972,6 +974,7 @@ class cached_property:
             raise TypeError(
                 "Cannot use cached_property instance without calling __set_name__ on it.")
         try:
+            # 利用 __dict__ 存储值
             cache = instance.__dict__
         except AttributeError:  # not all objects have __dict__ (e.g. class defines slots)
             msg = (
