@@ -187,6 +187,7 @@ _convert = {
 
 def total_ordering(cls):
     """Class decorator that fills in missing ordering methods"""
+    # 如果一个类有定义某个比较方法，会自动把其它比较方法也加上
     # Find user-defined comparisons (not those inherited from object).
     roots = {op for op in _convert if getattr(cls, op, None) is not getattr(object, op, None)}
     if not roots:
@@ -279,7 +280,8 @@ class partial:
     """New function with partial application of the given arguments
     and keywords.
     """
-
+    # 创建一个偏函数，冻结一部分参数
+    # 主要靠 __new__，__call__ 实现
     __slots__ = "func", "args", "keywords", "__dict__", "__weakref__"
     # / 表示其之前的参数必须都是位置参数
     def __new__(cls, func, /, *args, **keywords):
