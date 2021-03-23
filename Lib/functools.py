@@ -248,7 +248,7 @@ def reduce(function, sequence, initial=_initial_missing):
     of the iterable in the calculation, and serves as a default when the
     iterable is empty.
     """
-
+    # function 只能有两个参数
     it = iter(sequence)
 
     if initial is _initial_missing:
