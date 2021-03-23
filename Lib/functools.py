@@ -355,7 +355,8 @@ class partialmethod(object):
     Supports wrapping existing descriptors and handles non-descriptor
     callables as instance methods.
     """
-
+    # 和 partial 类似，在类中使用
+    # 不借助 __call__，借助 __get__ 
     def __init__(self, func, /, *args, **keywords):
         if not callable(func) and not hasattr(func, "__get__"):
             raise TypeError("{!r} is not callable or a descriptor"
