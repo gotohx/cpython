@@ -826,6 +826,7 @@ def singledispatch(func):
     implementations can be registered using the register() attribute of the
     generic function.
     """
+    # 只对第一个参数的类型作判断，维护一个字典，不同类型对应不同函数
     # There are many programs that use functools without singledispatch, so we
     # trade-off making singledispatch marginally slower for the benefit of
     # making start-up of such applications slightly faster.
@@ -864,6 +865,7 @@ def singledispatch(func):
         Registers a new implementation for the given *cls* on a *generic_func*.
 
         """
+        # cls 是参数类型
         nonlocal cache_token
         if func is None:
             if isinstance(cls, type):
