@@ -47,6 +47,8 @@ def update_wrapper(wrapper,
        are updated with the corresponding attribute from the wrapped
        function (defaults to functools.WRAPPER_UPDATES)
     """
+    # 保持函数签名，把 wrapped 函数属性赋值给 wrapper 函数
+    # 主要靠 setattr 实现，一般在装饰器函数中使用
     for attr in assigned:
         try:
             value = getattr(wrapped, attr)
@@ -917,7 +919,7 @@ class singledispatchmethod:
     Supports wrapping existing descriptors and handles non-descriptor
     callables as instance methods.
     """
-
+    # 类中使用
     def __init__(self, func):
         if not callable(func) and not hasattr(func, "__get__"):
             raise TypeError(f"{func!r} is not callable or a descriptor")
