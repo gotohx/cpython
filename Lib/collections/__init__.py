@@ -958,7 +958,28 @@ class ChainMap(_collections_abc.MutableMapping):
     mapping.
 
     '''
+    # 合并多个字典，ubdate 会修改原始字典，ChainMap 只是把多个字典用 list 链接起来
+    # ChainMap 数据结构为 [{}]
+    # 只会更新（增、删、改）第一个字典，查询会遍历所有字典，返回第一个命中的 key 对应 value
+    # 新建如下子类可实现正常的增、删、改功能
+    '''
+    class DeepChainMap(ChainMap):
+        'Variant of ChainMap that allows direct updates to inner scopes'
 
+        def __setitem__(self, key, value):
+            for mapping in self.maps:
+                if key in mapping:
+                    mapping[key] = value
+                    return
+            self.maps[0][key] = value
+
+        def __delitem__(self, key):
+            for mapping in self.maps:
+                if key in mapping:
+                    del mapping[key]
+                    return
+            raise KeyError(key)
+    '''
     def __init__(self, *maps):
         '''Initialize a ChainMap by setting *maps* to the given mappings.
         If no mappings are provided, a single empty dictionary is used.
@@ -969,6 +990,7 @@ class ChainMap(_collections_abc.MutableMapping):
     def __missing__(self, key):
         raise KeyError(key)
 
+    # 遍历 list 中的字典 
     def __getitem__(self, key):
         for mapping in self.maps:
             try:
@@ -980,6 +1002,7 @@ class ChainMap(_collections_abc.MutableMapping):
     def get(self, key, default=None):
         return self[key] if key in self else default
 
+    # 会去除重复的 key
     def __len__(self):
         return len(set().union(*self.maps))     # reuses stored hash values if possible
 
