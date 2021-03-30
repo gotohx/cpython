@@ -562,6 +562,7 @@ class Counter(dict):
     #   http://code.activestate.com/recipes/259174/
     #   Knuth, TAOCP Vol. II section 4.6.3
 
+    # dict 子类，用来统计可哈希对象的数量
     def __init__(self, iterable=None, /, **kwds):
         '''Create a new, empty Counter object.  And if given, count elements
         from an input iterable.  Or, initialize the count from another mapping
@@ -576,6 +577,7 @@ class Counter(dict):
         super().__init__()
         self.update(iterable, **kwds)
 
+    # key 不存在，则返回 0
     def __missing__(self, key):
         'The count of elements not in the Counter is zero.'
         # Needed so that self[missing_item] does not raise KeyError
