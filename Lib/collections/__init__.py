@@ -89,7 +89,9 @@ class OrderedDict(dict):
     # The prev links are weakref proxies (to prevent circular references).
     # Individual links are kept alive by the hard reference in self.__map.
     # Those hard references disappear when a key is deleted from an OrderedDict.
-
+    
+    # __root 是双向链表，__map 是字典，__map 的 key 是字典 key， value 是 key 形成的链表节点，
+    # 即 __root 节点，新加节点时会先调整 __map、__root，再调用默认的字典操作，其它操作同理
     def __init__(self, other=(), /, **kwds):
         '''Initialize an ordered dictionary.  The signature is the same as
         regular dictionaries.  Keyword argument order is preserved.
